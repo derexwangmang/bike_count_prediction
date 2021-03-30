@@ -1,0 +1,128 @@
+---
+title: "Exploratory Data Analysis"
+author: "Derex Wangmang"
+output:
+  html_document:
+    toc: true
+    toc_float: true
+    highlight: "tango"
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message = FALSE)
+```
+
+## Loading Packages and Data
+
+```{r}
+library(tidyverse)
+library(ggcorrplot)
+
+load("data/processed/intermediate_seoul_bike_data.rda")
+```
+
+## Plots
+
+```{r}
+bike %>%
+  select(where(is.factor), rented_bike_count) %>%
+  gather(-rented_bike_count, key = "var", value = "value") %>%
+  ggplot(aes(x = value, y = rented_bike_count)) +
+  geom_jitter() +
+  facet_wrap(~ var, scales = "free")
+```
+
+There is only one categorical variable in the dataset, the holiday. The holiday portion of the graph is much sparser, as expected, as the number of non-holidays far outnumber the number of holidays.
+
+```{r}
+bike %>%
+  select(where(is.numeric)) %>%
+  gather(-rented_bike_count, key = "var", value = "value") %>%
+  ggplot(aes(x = value, y = rented_bike_count)) +
+  geom_point() +
+  geom_smooth(se = F, color = "red") +
+  facet_wrap(~ var, scales = "free")
+```
+
+Selecting all the numeric variables and plotting the target variable against them provides an overview of the distributions in the dataset. While informative, the graphs tend to be difficult to read. Thus, I picked out specific ones to examine closer below.
+
+```{r}
+ggplot(bike, aes(month, rented_bike_count)) +
+  geom_jitter()
+```
+
+```{r}
+ggplot(bike, aes(temperature_c, rented_bike_count)) +
+  geom_bin2d()
+```
+
+```{r}
+ggplot(bike, aes(hour, rented_bike_count)) +
+  geom_col() +
+  facet_wrap(~ month) +
+  labs(x = "Date (Dec 2017 - Nov 2018)")
+```
+
+While the data spans one year, not all of the data was captured in the same year. Here, 0 represents December 2017. 1 through 11 represent the months of November.
+
+```{r}
+corr <- round(cor(bike %>% select(where(is.numeric))), 1)
+ggcorrplot(corr, type = "lower", lab = T)
+```
+
+The Pearson Correlation plot indicated that there are two features strongly correlated with each other: the dew point temperature and the temperature.
+
+```{r}
+fit <- lm(rented_bike_count ~ ., bike)
+car::vif(fit)
+```
+
+The collinearity is confirmed by the variance inflation factor.
+
+```{r}
+fit2 <- lm(rented_bike_count ~ . - dew_point_temperature_c, bike)
+car::vif(fit2)
+```
+
+Removing `dew_point_temperature_c` led to a large reduction in the variance inflation factor.
+
+```{r}
+bike <- bike %>%
+  select(-dew_point_temperature_c)
+save(bike, file = "data/processed/seoul_bike_data.rda")
+```
+
+Thus, I removed the variable from the processed dataset and saved the updated dataset for future use.
+
+## Rental Bike Count Distribution
+
+```{r}
+ggplot(bike, aes(rented_bike_count)) +
+  geom_histogram()
+```
+
+The rented bike count has a unimodal distribution with a center around 100.
+
+```{r}
+ggplot(bike, aes(sample = rented_bike_count)) +
+  stat_qq() +
+  stat_qq_line(color = 2) +
+  labs(title = "Normal Q-Q Plot") +
+  theme_bw() +
+  theme(panel.grid = element_blank())
+```
+
+This Q-Q plot confirms that the count is non-normal.
+
+```{r}
+bike %>%
+  mutate(rented_bike_count = log(rented_bike_count) + 1) %>%
+  ggplot(aes(sample = rented_bike_count)) +
+  stat_qq() +
+  stat_qq_line(color = 2) +
+  labs(title = "Normal Q-Q Plot") +
+  theme_bw() +
+  theme(panel.grid = element_blank())
+```
+
+A log transformation fails to achieve normality. If later models have assumptions of normality, `rented_bike_count` should be transformed differently. 

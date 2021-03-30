@@ -1,0 +1,14 @@
+seoul_bike_data.Rds contains processed information about the rental bikes in Seoul, South Korea. The other file in this directory, intermediate_seoul_bike_data.Rds, was the result of the initial processing, but the EDA resulted in the removal of one variable.
+- month: numerical month.
+	- 0 represents December 2017
+	- 1-11 represent months in 2018
+- rented_bike_count: count of bikes rented at given hour
+- hour: hour of the day (0-23)
+- temperature_c: temperature in Celsius
+- humidity_percent: humidity in percent
+- wind_speed_m_s: wind speed in meters per second
+- visibility_10m: visibility
+- solar_radiation_mj_m2: solar radiation in megaJoule per meter squared
+- rainfall: rainfall in millimeters
+- snowfall_cm: snowfall in centimeters
+- holiday: holiday or not holiday
